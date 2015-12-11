@@ -52,11 +52,11 @@ protected:
     void printMap(T& container, const string& text = "");
 
     ofxJSON data;
-    map<string,string> stringMap;
-    map<string,int> intMap;
-    map<string,bool> boolMap;
-    map<string,float> floatMap;
-    map<string,double> doubleMap;
+    unordered_map<string,string> stringMap;
+    unordered_map<string,int> intMap;
+    unordered_map<string,bool> boolMap;
+    unordered_map<string,float> floatMap;
+    unordered_map<string,double> doubleMap;
 
     string delimiter;
 

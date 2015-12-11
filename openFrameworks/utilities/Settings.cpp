@@ -17,26 +17,20 @@ void Settings::load(string file) {
     ofxJSON loadData;
 
     if (loadData.open(file)) {
-        if (data.empty()) {
-            // Load new data into json object if this is the first time settings
-            // has been loaded
-            data = loadData;
-        } else {
-            // Any values bound to gui are bound to memory address of value
-            // inside various cached map objects, so we can't clear() the maps
-            // Instead, load new values from new json object to cached map
+        data = loadData;
 
-            // TODO any newly-added keys won't get loaded here
-            // Need to keep around the loadData object and pull stuff out it
-            // later...
-            // (Can't loop through it and update the cache objects because we
-            // don't know the types of values at this point...)
-            for (auto& it : stringMap) stringMap[it.first] = loadData[it.first].asString();
-            for (auto& it : intMap) intMap[it.first] = loadData[it.first].asInt();
-            for (auto& it : boolMap) boolMap[it.first] = loadData[it.first].asBool();
-            for (auto& it : floatMap) floatMap[it.first] = loadData[it.first].asFloat();
-            for (auto& it : doubleMap) doubleMap[it.first] = loadData[it.first].asDouble();
-        }
+        // Any values bound to gui are bound to memory address of value
+        // inside various cached map objects, so we can't clear() the maps
+        // Instead, load new values from new json object to cached maps
+
+        // TODO any keys that were in the old json that have been removed from
+        // the new file won't be deleted from the cached maps. Need to compare
+        // data vs loadData objects and remove missing keys?
+        for (auto& it : stringMap) stringMap[it.first] = data[it.first].asString();
+        for (auto& it : intMap) intMap[it.first] = data[it.first].asInt();
+        for (auto& it : boolMap) boolMap[it.first] = data[it.first].asBool();
+        for (auto& it : floatMap) floatMap[it.first] = data[it.first].asFloat();
+        for (auto& it : doubleMap) doubleMap[it.first] = data[it.first].asDouble();
 
         ofNotifyEvent(settingsLoaded);
     } else {
@@ -54,7 +48,7 @@ void Settings::save(string file) {
 
     // second arg is for pretty-print
     if (data.save(file, true)) {
-        ofNotifyEvent(settingsLoaded);
+        ofNotifyEvent(settingsSaved);
     } else {
         ofLogError("Settings") << "could not save file! " << file;
     }
