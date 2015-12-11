@@ -45,11 +45,16 @@ protected:
     float& _floatVal(string& key);
     double& _doubleVal(string& key);
 
+    ofxJSON getChild(ofxJSON parent, vector<string> keys);
+
     template<typename T>
     bool exists(T& container, const string &key);
 
     template<typename T>
     void printMap(T& container, const string& text = "");
+
+    template<typename T>
+    void cacheToJson(T& container, ofxJSON& data);
 
     ofxJSON data;
     unordered_map<string,string> stringMap;

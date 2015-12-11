@@ -10,7 +10,6 @@
 
 Settings::Settings() {
     delimiter = "/";
-    // TODO conversion/recursion of json["parent"]["child"] to "parent/child"
 }
 
 void Settings::load(string file) {
@@ -27,8 +26,8 @@ void Settings::load(string file) {
         // the new file won't be deleted from the cached maps. Need to compare
         // data vs loadData objects and remove missing keys?
         for (auto& it : stringMap) stringMap[it.first] = data[it.first].asString();
-        for (auto& it : intMap) intMap[it.first] = data[it.first].asInt();
         for (auto& it : boolMap) boolMap[it.first] = data[it.first].asBool();
+        for (auto& it : intMap) intMap[it.first] = data[it.first].asInt();
         for (auto& it : floatMap) floatMap[it.first] = data[it.first].asFloat();
         for (auto& it : doubleMap) doubleMap[it.first] = data[it.first].asDouble();
 
@@ -40,11 +39,11 @@ void Settings::load(string file) {
 
 void Settings::save(string file) {
     // Write cached values back to JSON object
-    for (auto& it : stringMap) data[it.first] = it.second;
-    for (auto& it : intMap) data[it.first] = it.second;
-    for (auto& it : boolMap) data[it.first] = it.second;
-    for (auto& it : floatMap) data[it.first] = it.second;
-    for (auto& it : doubleMap) data[it.first] = it.second;
+    cacheToJson(stringMap, data);
+    cacheToJson(boolMap, data);
+    cacheToJson(intMap, data);
+    cacheToJson(floatMap, data);
+    cacheToJson(doubleMap, data);
 
     // second arg is for pretty-print
     if (data.save(file, true)) {
@@ -71,16 +70,19 @@ double& Settings::getDouble(string key) {
 }
 
 string& Settings::_stringVal(string& key) {
-//    if (ofStringTimesInString(key, delimiter)) {
-//        auto keys = ofSplitString(key, delimiter);
-//    }
-
     if (!exists(stringMap, key)) {
-        if (data.isMember(key)) {
-            stringMap[key] = data[key].asString();
-        } else {
-            ofLogWarning("Settings") << "no setting found for: " << key;
-            stringMap[key] = "";
+        try {
+            if (ofStringTimesInString(key, delimiter)) {
+                auto keys = ofSplitString(key, delimiter);
+                stringMap[key] = getChild(data, keys).asString();
+            } else if (data.isMember(key)) {
+                stringMap[key] = data[key].asString();
+            } else {
+                ofLogWarning("Settings") << "no setting found for: " << key;
+                stringMap[key] = "";
+            }
+        } catch (const runtime_error& e) {
+            ofLogError("Settings") << "error for key: " << key << ": " << e.what();
         }
     }
 
@@ -90,11 +92,18 @@ string& Settings::_stringVal(string& key) {
 
 bool& Settings::_boolVal(string& key) {
     if (!exists(boolMap, key)) {
-        if (data.isMember(key)) {
-            boolMap[key] = data[key].asBool();
-        } else {
-            ofLogWarning("Settings") << "no setting found for: " << key;
-            boolMap[key] = false;
+        try {
+            if (ofStringTimesInString(key, delimiter)) {
+                auto keys = ofSplitString(key, delimiter);
+                boolMap[key] = getChild(data, keys).asBool();
+            } else if (data.isMember(key)) {
+                boolMap[key] = data[key].asBool();
+            } else {
+                ofLogWarning("Settings") << "no setting found for: " << key;
+                boolMap[key] = false;
+            }
+        } catch (const runtime_error& e) {
+            ofLogError("Settings") << "error for key: " << key << ": " << e.what();
         }
     }
 
@@ -104,11 +113,18 @@ bool& Settings::_boolVal(string& key) {
 
 int& Settings::_intVal(string& key) {
     if (!exists(intMap, key)) {
-        if (data.isMember(key)) {
-            intMap[key] = data[key].asInt();
-        } else {
-            ofLogWarning("Settings") << "no setting found for: " << key;
-            intMap[key] = 0;
+        try {
+            if (ofStringTimesInString(key, delimiter)) {
+                auto keys = ofSplitString(key, delimiter);
+                intMap[key] = getChild(data, keys).asInt();
+            } else if (data.isMember(key)) {
+                intMap[key] = data[key].asInt();
+            } else {
+                ofLogWarning("Settings") << "no setting found for: " << key;
+                intMap[key] = 0;
+            }
+        } catch (const runtime_error& e) {
+            ofLogError("Settings") << "error for key: " << key << ": " << e.what();
         }
     }
 
@@ -118,11 +134,18 @@ int& Settings::_intVal(string& key) {
 
 float& Settings::_floatVal(string& key) {
     if (!exists(floatMap, key)) {
-        if (data.isMember(key)) {
-            floatMap[key] = data[key].asFloat();
-        } else {
-            ofLogWarning("Settings") << "no setting found for: " << key;
-            floatMap[key] = 0;
+        try {
+            if (ofStringTimesInString(key, delimiter)) {
+                auto keys = ofSplitString(key, delimiter);
+                floatMap[key] = getChild(data, keys).asFloat();
+            } else if (data.isMember(key)) {
+                floatMap[key] = data[key].asFloat();
+            } else {
+                ofLogWarning("Settings") << "no setting found for: " << key;
+                floatMap[key] = 0;
+            }
+        } catch (const runtime_error& e) {
+            ofLogError("Settings") << "error for key: " << key << ": " << e.what();
         }
     }
 
@@ -132,16 +155,39 @@ float& Settings::_floatVal(string& key) {
 
 double& Settings::_doubleVal(string& key) {
     if (!exists(doubleMap, key)) {
-        if (data.isMember(key)) {
-            doubleMap[key] = data[key].asDouble();
-        } else {
-            ofLogWarning("Settings") << "no setting found for: " << key;
-            doubleMap[key] = 0;
+        try {
+            if (ofStringTimesInString(key, delimiter)) {
+                auto keys = ofSplitString(key, delimiter);
+                doubleMap[key] = getChild(data, keys).asDouble();
+            } else if (data.isMember(key)) {
+                doubleMap[key] = data[key].asDouble();
+            } else {
+                ofLogWarning("Settings") << "no setting found for: " << key;
+                doubleMap[key] = 0;
+            }
+        } catch (const runtime_error& e) {
+            ofLogError("Settings") << "error for key: " << key << ": " << e.what();
         }
     }
 
 //    printMap(doubleMap, "doubles");
     return doubleMap[key];
+}
+
+ofxJSON Settings::getChild(ofxJSON data, vector<string> keys) {
+    if (keys.size()) {
+        string key = keys.front();
+        keys.erase(keys.begin());
+
+        if (data.isMember(key)) {
+            return getChild(data[key], keys);
+        } else {
+            ofLogWarning("Settings") << "no setting found for: " << key;
+            return ofxJSON();
+        }
+    }
+
+    return data;
 }
 
 template<typename T>
@@ -153,5 +199,16 @@ template<typename T>
 void Settings::printMap(T& container, const string& text) {
     for (auto& it : container) {
         ofLogNotice() << text << ": " << it.first << ": " << it.second;
+    }
+}
+
+template<typename T>
+void Settings::cacheToJson(T& container, ofxJSON& data) {
+    for (auto& it : container) {
+        auto& key = it.first;
+        if (ofStringTimesInString(key, delimiter)) {
+            auto keys = ofSplitString(key, delimiter);
+            getChild(data, keys) = (ofxJSON) it.second;
+        }
     }
 }
