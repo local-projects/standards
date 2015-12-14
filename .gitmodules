@@ -1,0 +1,3 @@
+[submodule "openFrameworks/utilities/ofxJsonSettings"]
+	path = openFrameworks/utilities/ofxJsonSettings
+	url = https://github.com/local-projects/ofxJsonSettings.git
