@@ -12,11 +12,15 @@ Settings::Settings() {
     delimiter = "/";
 }
 
+void Settings::setDelimiter(string delim) {
+    delimiter = delim;
+}
+
 void Settings::load(string file) {
     ofxJSON loadData;
 
     if (loadData.open(file)) {
-        data = loadData;
+        jsonStore = loadData;
 
         // Any values bound to gui are bound to memory address of value
         // inside various cached map objects, so we can't clear() the maps
@@ -24,12 +28,27 @@ void Settings::load(string file) {
 
         // TODO any keys that were in the old json that have been removed from
         // the new file won't be deleted from the cached maps. Need to compare
-        // data vs loadData objects and remove missing keys?
-        for (auto& it : stringMap) stringMap[it.first] = data[it.first].asString();
-        for (auto& it : boolMap) boolMap[it.first] = data[it.first].asBool();
-        for (auto& it : intMap) intMap[it.first] = data[it.first].asInt();
-        for (auto& it : floatMap) floatMap[it.first] = data[it.first].asFloat();
-        for (auto& it : doubleMap) doubleMap[it.first] = data[it.first].asDouble();
+        // jsonStore vs loadData objects and remove missing keys?
+        for (auto& it : stringMap) {
+            string key = it.first;
+            stringMap[key] = _stringValFromJson(jsonStore, key);
+        }
+        for (auto& it : boolMap) {
+            string key = it.first;
+            boolMap[key] = _boolValFromJson(jsonStore, key);
+        }
+        for (auto& it : intMap) {
+            string key = it.first;
+            intMap[key] = _intValFromJson(jsonStore, key);
+        }
+        for (auto& it : floatMap) {
+            string key = it.first;
+            floatMap[key] = _floatValFromJson(jsonStore, key);
+        }
+        for (auto& it : doubleMap) {
+            string key = it.first;
+            doubleMap[key] = _doubleValFromJson(jsonStore, key);
+        }
 
         ofNotifyEvent(settingsLoaded);
     } else {
@@ -37,16 +56,15 @@ void Settings::load(string file) {
     }
 }
 
-void Settings::save(string file) {
+void Settings::save(string file, bool prettyPrint) {
     // Write cached values back to JSON object
-    cacheToJson(stringMap, data);
-    cacheToJson(boolMap, data);
-    cacheToJson(intMap, data);
-    cacheToJson(floatMap, data);
-    cacheToJson(doubleMap, data);
+    cacheToJson(stringMap, jsonStore);
+    cacheToJson(boolMap, jsonStore);
+    cacheToJson(intMap, jsonStore);
+    cacheToJson(floatMap, jsonStore);
+    cacheToJson(doubleMap, jsonStore);
 
-    // second arg is for pretty-print
-    if (data.save(file, true)) {
+    if (jsonStore.save(file, prettyPrint)) {
         ofNotifyEvent(settingsSaved);
     } else {
         ofLogError("Settings") << "could not save file! " << file;
@@ -71,19 +89,7 @@ double& Settings::getDouble(string key) {
 
 string& Settings::_stringVal(string& key) {
     if (!exists(stringMap, key)) {
-        try {
-            if (ofStringTimesInString(key, delimiter)) {
-                auto keys = ofSplitString(key, delimiter);
-                stringMap[key] = getChild(data, keys).asString();
-            } else if (data.isMember(key)) {
-                stringMap[key] = data[key].asString();
-            } else {
-                ofLogWarning("Settings") << "no setting found for: " << key;
-                stringMap[key] = "";
-            }
-        } catch (const runtime_error& e) {
-            ofLogError("Settings") << "error for key: " << key << ": " << e.what();
-        }
+        stringMap[key] = _stringValFromJson(jsonStore, key);
     }
 
 //    printMap(stringMap, "strings");
@@ -92,19 +98,7 @@ string& Settings::_stringVal(string& key) {
 
 bool& Settings::_boolVal(string& key) {
     if (!exists(boolMap, key)) {
-        try {
-            if (ofStringTimesInString(key, delimiter)) {
-                auto keys = ofSplitString(key, delimiter);
-                boolMap[key] = getChild(data, keys).asBool();
-            } else if (data.isMember(key)) {
-                boolMap[key] = data[key].asBool();
-            } else {
-                ofLogWarning("Settings") << "no setting found for: " << key;
-                boolMap[key] = false;
-            }
-        } catch (const runtime_error& e) {
-            ofLogError("Settings") << "error for key: " << key << ": " << e.what();
-        }
+        boolMap[key] = _boolValFromJson(jsonStore, key);
     }
 
 //    printMap(boolMap, "bools");
@@ -113,19 +107,7 @@ bool& Settings::_boolVal(string& key) {
 
 int& Settings::_intVal(string& key) {
     if (!exists(intMap, key)) {
-        try {
-            if (ofStringTimesInString(key, delimiter)) {
-                auto keys = ofSplitString(key, delimiter);
-                intMap[key] = getChild(data, keys).asInt();
-            } else if (data.isMember(key)) {
-                intMap[key] = data[key].asInt();
-            } else {
-                ofLogWarning("Settings") << "no setting found for: " << key;
-                intMap[key] = 0;
-            }
-        } catch (const runtime_error& e) {
-            ofLogError("Settings") << "error for key: " << key << ": " << e.what();
-        }
+        intMap[key] = _intValFromJson(jsonStore, key);
     }
 
 //    printMap(intMap, "ints");
@@ -134,19 +116,7 @@ int& Settings::_intVal(string& key) {
 
 float& Settings::_floatVal(string& key) {
     if (!exists(floatMap, key)) {
-        try {
-            if (ofStringTimesInString(key, delimiter)) {
-                auto keys = ofSplitString(key, delimiter);
-                floatMap[key] = getChild(data, keys).asFloat();
-            } else if (data.isMember(key)) {
-                floatMap[key] = data[key].asFloat();
-            } else {
-                ofLogWarning("Settings") << "no setting found for: " << key;
-                floatMap[key] = 0;
-            }
-        } catch (const runtime_error& e) {
-            ofLogError("Settings") << "error for key: " << key << ": " << e.what();
-        }
+        floatMap[key] = _floatValFromJson(jsonStore, key);
     }
 
 //    printMap(floatMap, "floats");
@@ -155,32 +125,118 @@ float& Settings::_floatVal(string& key) {
 
 double& Settings::_doubleVal(string& key) {
     if (!exists(doubleMap, key)) {
-        try {
-            if (ofStringTimesInString(key, delimiter)) {
-                auto keys = ofSplitString(key, delimiter);
-                doubleMap[key] = getChild(data, keys).asDouble();
-            } else if (data.isMember(key)) {
-                doubleMap[key] = data[key].asDouble();
-            } else {
-                ofLogWarning("Settings") << "no setting found for: " << key;
-                doubleMap[key] = 0;
-            }
-        } catch (const runtime_error& e) {
-            ofLogError("Settings") << "error for key: " << key << ": " << e.what();
-        }
+        doubleMap[key] = _floatValFromJson(jsonStore, key);
     }
 
 //    printMap(doubleMap, "doubles");
     return doubleMap[key];
 }
 
-ofxJSON Settings::getChild(ofxJSON data, vector<string> keys) {
+string Settings::_stringValFromJson(ofxJSON& data, string& key) {
+    try {
+        // For keys like "fonts/face/serif", split the string and do a recursive
+        // lookup to find that json element
+        if (ofStringTimesInString(key, delimiter)) {
+            return getNestedChild(data, key).asString();
+        }
+        // Otherwise do a direct lookup if the key exists
+        else if (data.isMember(key)) {
+            return data[key].asString();
+        }
+        else {
+            ofLogWarning("Settings") << "no setting found for: " << key;
+            return "";
+        }
+    } catch (const runtime_error& e) {
+        ofLogError("Settings") << "error for key: " << key << ": " << e.what();
+        return "";
+    }
+}
+
+bool Settings::_boolValFromJson(ofxJSON& data, string& key) {
+    // See _stringValFromJson() for explanation
+    try {
+        if (ofStringTimesInString(key, delimiter)) {
+            return getNestedChild(data, key).asBool();
+        } else if (data.isMember(key)) {
+            return data[key].asBool();
+        } else {
+            ofLogWarning("Settings") << "no setting found for: " << key;
+            return false;
+        }
+    } catch (const runtime_error& e) {
+        ofLogError("Settings") << "error for key: " << key << ": " << e.what();
+        return false;
+    }
+}
+
+int Settings::_intValFromJson(ofxJSON& data, string& key) {
+    // See _stringValFromJson() for explanation
+    try {
+        if (ofStringTimesInString(key, delimiter)) {
+            return getNestedChild(data, key).asInt();
+        } else if (data.isMember(key)) {
+            return data[key].asInt();
+        } else {
+            ofLogWarning("Settings") << "no setting found for: " << key;
+            return 0;
+        }
+    } catch (const runtime_error& e) {
+        ofLogError("Settings") << "error for key: " << key << ": " << e.what();
+        return 0;
+    }
+}
+
+float Settings::_floatValFromJson(ofxJSON& data, string& key) {
+    // See _stringValFromJson() for explanation
+    try {
+        if (ofStringTimesInString(key, delimiter)) {
+            return getNestedChild(data, key).asFloat();
+        } else if (data.isMember(key)) {
+            return data[key].asFloat();
+        } else {
+            ofLogWarning("Settings") << "no setting found for: " << key;
+            return 0;
+        }
+    } catch (const runtime_error& e) {
+        ofLogError("Settings") << "error for key: " << key << ": " << e.what();
+        return 0;
+    }
+}
+
+double Settings::_doubleValFromJson(ofxJSON& data, string& key) {
+    // See _stringValFromJson() for explanation
+    try {
+        if (ofStringTimesInString(key, delimiter)) {
+            return getNestedChild(data, key).asDouble();
+        } else if (data.isMember(key)) {
+            return data[key].asDouble();
+        } else {
+            ofLogWarning("Settings") << "no setting found for: " << key;
+            return 0;
+        }
+    } catch (const runtime_error& e) {
+        ofLogError("Settings") << "error for key: " << key << ": " << e.what();
+        return 0;
+    }
+}
+
+ofxJSON Settings::getNestedChild(ofxJSON data, string key) {
+    auto keys = ofSplitString(key, delimiter);
+    return getNestedChild(data, keys);
+}
+
+ofxJSON Settings::getNestedChild(ofxJSON data, vector<string> keys) {
+    // Given a lookup key like "fonts/face/serif", find the corresponding
+    // json object data["fonts"]["face"]["serif"]
+    // (The other signature of this function actually splits the string into a
+    // vector of keys)
     if (keys.size()) {
         string key = keys.front();
         keys.erase(keys.begin());
 
         if (data.isMember(key)) {
-            return getChild(data[key], keys);
+            return getNestedChild(data[key], keys);
         } else {
             ofLogWarning("Settings") << "no setting found for: " << key;
             return ofxJSON();
@@ -188,6 +244,51 @@ ofxJSON Settings::getChild(ofxJSON data, vector<string> keys) {
     }
 
     return data;
+}
+
+template<typename T>
+void Settings::setNestedChild(ofxJSON& data, string key, T val) {
+    auto keys = ofSplitString(key, delimiter);
+    setNestedChild(data, keys, val);
+}
+
+template<typename T>
+void Settings::setNestedChild(ofxJSON& data, vector<string> keys, T val) {
+    // Given a lookup key like "fonts/face/serif", find the corresponding
+    // json object data["fonts"]["face"]["serif"] and set its value
+    // (The other signature of this function actually splits the string into a
+    // vector of keys)
+    auto* object = &data;
+
+    if (keys.size() < 2) {
+        ofLogError("Settings")
+            << "setNestedChild() malformed key (should be at least object/key): "
+            << ofJoinString(keys, delimiter);
+        return;
+    }
+
+    while (keys.size()) {
+        string key = keys.front();
+        if (keys.size() == 1) {
+            (*object)[key] = val;
+            return;
+        } else {
+            keys.erase(keys.begin());
+            object = (ofxJSON *) &(*object)[key];
+        }
+    }
+}
+
+template<typename T>
+void Settings::cacheToJson(T& container, ofxJSON& data) {
+    for (auto& it : container) {
+        string key = it.first;
+        if (ofStringTimesInString(key, delimiter)) {
+            setNestedChild(data, key, it.second);
+        } else {
+            data[key] = container[key];
+        }
+    }
 }
 
 template<typename T>
@@ -199,16 +300,5 @@ template<typename T>
 void Settings::printMap(T& container, const string& text) {
     for (auto& it : container) {
         ofLogNotice() << text << ": " << it.first << ": " << it.second;
-    }
-}
-
-template<typename T>
-void Settings::cacheToJson(T& container, ofxJSON& data) {
-    for (auto& it : container) {
-        auto& key = it.first;
-        if (ofStringTimesInString(key, delimiter)) {
-            auto keys = ofSplitString(key, delimiter);
-            getChild(data, keys) = (ofxJSON) it.second;
-        }
     }
 }
